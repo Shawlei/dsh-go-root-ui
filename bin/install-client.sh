@@ -12,7 +12,13 @@ RS=$(find_rootfs) || { echo "没找到 proot rootfs（App 还没装本机环境�
 
 OWNER=$(dir_owner "$RS")
 BIN="$RS/usr/local/bin"
-mkdir -p "$BIN" || { echo "建 $BIN 失败"; exit 1; }
+ETC="$RS/usr/local/etc"
+mkdir -p "$BIN" "$ETC" || { echo "建 $BIN 失败"; exit 1; }
+
+# 客户端运行时从这里读 token，换 token 只要重写这个文件
+printf '%s' "$TOK" > "$ETC/dshgo.token"
+chmod 600 "$ETC/dshgo.token"
+chown "$OWNER:$OWNER" "$ETC/dshgo.token" 2>/dev/null
 
 # 先写临时文件再改名，避免正在运行的脚本被截断
 sed "s|__TOKEN__|$TOK|g" "$MODDIR/bin/client.sh"      > "$BIN/.r.tmp"    && mv -f "$BIN/.r.tmp" "$BIN/r"
