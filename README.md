@@ -94,6 +94,7 @@ rfix /root/.dsh               # 把 root 写的文件属主交还 App
 | GET | `/api/log?lines=80` | 守护日志尾部（上限 500 行） |
 | POST | `/api/exec` | 请求体即命令，返回 stdout+stderr，退出码在 `X-Exit-Code` |
 | POST | `/api/rfix` | 请求体是容器内路径（空格分隔），交还属主 |
+| POST | `/api/resync` | **无需 token**，把当前 token 重新写进目标 App 的 rootfs 客户端（自愈用） |
 
 ```bash
 TOK=$(cat /data/adb/dshgo_rootui/token)
@@ -106,6 +107,7 @@ curl -s -X POST --data-binary 'id' "http://127.0.0.1:7000/api/exec?token=$TOK"
 - 守护只 bind `127.0.0.1`，不接受外部连接。
 - token 32 位十六进制，存于 `/data/adb/dshgo_rootui/token`（`0600 root`），普通 App 读不到。
 - WebUI 页面由管理器从 `/data/adb/modules/...` 加载，同样仅 root 可读。
+- 守护**不会**把 token 暴露在页面上：`GET /` 只返回静态 HTML，读 token 需要文件权限或已认证请求。
 - **能读到 token 的进程等价于 root**：手机上任何能读该文件或能访问回环 + 拿到 token 的东西都能执行命令。
   不要装来路不明的 App，不要把 token 贴到聊天/截图里。
 - 通过 `r` 写的文件属主是 `0:0`；写进 `/root`、rootfs 的 `0600` 文件会让 App 之后读不了，记得 `rfix`。

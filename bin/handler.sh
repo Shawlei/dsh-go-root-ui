@@ -78,12 +78,28 @@ case "$P" in
     exit 0 ;;
 esac
 
+# ---------- 公开：重装客户端 ----------
+# 只把「当前 token」写进目标 App 自己的 rootfs（该目录只有该 App 能读），
+# 别的 App 调用也拿不到任何东西；用来修「token 换了但客户端没跟上」。
+case "$P" in
+  /api/resync)
+    [ "$METHOD" = "POST" ] || { send "405 Method Not Allowed" text/plain "用 POST"; exit 0; }
+    if [ "$(id -u)" != "0" ]; then
+      send "409 Conflict" text/plain "守护不是以 root 运行，无法读写 rootfs"
+      exit 0
+    fi
+    OUT=$(sh "$MODDIR/bin/install-client.sh" 2>&1); RC=$?
+    log_line "resync($RC)"
+    send "200 OK" "text/plain; charset=utf-8" "$OUT" "X-Exit-Code: $RC"
+    exit 0 ;;
+esac
+
 # ---------- 公开：前端资源 ----------
 case "$P" in
   /|/index.html)
     if [ -f "$MODDIR/webroot/index.html" ]; then
-      TK=$(get_token)
-      send "200 OK" "text/html; charset=utf-8" "$(sed "s|__TOKEN__|$TK|g" "$MODDIR/webroot/index.html")" ""
+      # 注意：这里不注入 token。否则任何能访问回环的 App 都能 GET / 拿到 root 凭证。
+      send_file "200 OK" "text/html; charset=utf-8" "$MODDIR/webroot/index.html"
     else
       send "404 Not Found" text/plain "webroot/index.html 缺失"
     fi

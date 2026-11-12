@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.1.2
+
+- 安全修复：`GET /` 不再把 token 注入页面（此前任何能访问回环的 App 都能读到 root 凭证）
+- 新增公开端点 `POST /api/resync`：把当前 token 重新写进目标 App 的 rootfs 客户端，
+  用于「token 变了但客户端没跟上」的自愈；它只会写进 App 私有目录，别的 App 读不到
+- `r` 遇到 401 自动调用 resync 并重试一次
+- `rootd.sh` 拒绝以非 root 身份启动（否则读不到 0600 的 token，表现为全部 401）
+- `rotate.sh` 同时更新页面里烘入的 token
+
 ## 1.1.1
 
 - 启用 GitHub Actions：推 `v*` tag 自动打包并发布 Release

@@ -5,6 +5,11 @@ MODDIR="${DSHGO_MODDIR:-${HERE%/*}}"
 . "$MODDIR/bin/common.sh"
 
 ensure_data
+if [ "$(id -u)" != "0" ]; then
+  log_line "refuse: not root (uid=$(id -u))"
+  echo "rootd: 必须以 root 启动（当前 uid=$(id -u)），否则读不到 $DATA/token" >&2
+  exit 1
+fi
 export DSHGO_MODDIR="$MODDIR" DSHGO_DATA="$DATA" DSHGO_PORT="$PORT"
 
 # 客户端一并在启动时装好，用户不用再点一次

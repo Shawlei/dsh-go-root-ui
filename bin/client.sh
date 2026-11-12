@@ -26,7 +26,13 @@ CODE=$(curl -s -m 120 -o "$TMP" -w '%{http_code}' -X POST --data-binary "$CMD" \
 case "$CODE" in
   200) cat "$TMP"; newline "$TMP"; exit 0 ;;
   000) ;;  # 7000 没起来，退回老的一次性 nc 通道
-  401) cat "$TMP"; echo; echo "[r] token 不匹配：在模块 WebUI 点「更新客户端」" >&2; exit 1 ;;
+  401)
+    # 守护的 token 变了（重装/轮换），让它把客户端重写一遍再试一次
+    curl -s -m 10 -X POST -o /dev/null "http://127.0.0.1:$HTTP_PORT/api/resync" 2>/dev/null
+    CODE2=$(curl -s -m 120 -o "$TMP" -w '%{http_code}' -X POST --data-binary "$CMD" \
+            "http://127.0.0.1:$HTTP_PORT/api/exec?token=$TOK" 2>/dev/null)
+    if [ "$CODE2" = "200" ]; then cat "$TMP"; newline "$TMP"; exit 0; fi
+    cat "$TMP"; echo; echo "[r] token 不匹配且自动同步失败，重装一次模块" >&2; exit 1 ;;
   *)   cat "$TMP"; echo; echo "[r] 通道返回 $CODE" >&2; exit 1 ;;
 esac
 
