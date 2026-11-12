@@ -3,7 +3,10 @@
 #   r <命令...>          r - <<'X' ... X
 #   rfix <容器内路径...>  把 root 写的文件属主交还 App
 # 通道：127.0.0.1:<端口>，token 已在安装时写入本文件
-TOK="${DSH_ROOTD_TOKEN:-__TOKEN__}"
+# token 来源优先级：环境变量 > /usr/local/etc/dshgo.token > 烤入值
+TOK="${DSH_ROOTD_TOKEN:-}"
+[ -n "$TOK" ] || { [ -r /usr/local/etc/dshgo.token ] && TOK=$(cat /usr/local/etc/dshgo.token 2>/dev/null); }
+[ -n "$TOK" ] || TOK="__TOKEN__"
 HTTP_PORT="${DSH_ROOTD_HTTP:-7000}"
 NC_PORT="${DSH_ROOTD_NC:-6000}"
 
