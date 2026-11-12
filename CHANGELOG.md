@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.1.3
+
+- 修复 token 错位：`customize.sh` 不再预先把 token 烤进 `bin/client.sh`，
+  容器客户端一律由 `install-client.sh` 用当时的 token 生成
+- 客户端改为运行时读取 `/usr/local/etc/dshgo.token`（rootfs 内、属主为 App、0600），
+  换 token 只需重写这个文件，不必重装客户端
+- `install-client.sh` 同时写入 token 文件与客户端
+
 ## 1.1.2
 
 - 安全修复：`GET /` 不再把 token 注入页面（此前任何能访问回环的 App 都能读到 root 凭证）
