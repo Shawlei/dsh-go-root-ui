@@ -20,9 +20,9 @@ fi
 chmod 600 "$DATA/token"
 TOK=$(cat "$DATA/token")
 
+# 只给页面烤 token；容器客户端永远保持 __TOKEN__ 占位符，
+# 由 install-client.sh 在写进 rootfs 时用「当时的」token 生成（避免两次注入导致旧值）
 sed -i "s|__TOKEN__|$TOK|g" "$MODPATH/webroot/index.html" 2>/dev/null
-sed -i "s|__TOKEN__|$TOK|g" "$MODPATH/bin/client.sh" 2>/dev/null
-sed -i "s|__TOKEN__|$TOK|g" "$MODPATH/bin/client-rfix.sh" 2>/dev/null
 
 chmod 755 "$MODPATH"/*.sh "$MODPATH"/bin/*.sh 2>/dev/null
 chmod 644 "$MODPATH/module.prop" "$MODPATH/README.md" \
