@@ -1,0 +1,31 @@
+#!/sbin/sh
+# 兼容 Magisk / KernelSU / SukiSU / APatch 的模块安装器
+OUTFD=$2
+ZIPFILE=$3
+ui_print() { echo "ui_print $1"; echo "ui_print"; } >&$OUTFD
+abort() { ui_print "! $1"; exit 1; }
+
+[ -n "$ZIPFILE" ] || abort "没有拿到模块包路径"
+TMPDIR=/dev/tmp/dshgo_rootui
+rm -rf "$TMPDIR"; mkdir -p "$TMPDIR" || abort "建临时目录失败"
+
+UNZIP=""
+if command -v unzip >/dev/null 2>&1; then
+  UNZIP="unzip"
+else
+  for bb in /data/adb/ksu/bin/busybox /data/adb/ap/bin/busybox /data/adb/magisk/busybox; do
+    if [ -x "$bb" ] && "$bb" unzip --help >/dev/null 2>&1; then UNZIP="$bb unzip"; break; fi
+  done
+fi
+[ -n "$UNZIP" ] || abort "找不到解压工具（unzip / busybox）"
+
+$UNZIP -o "$ZIPFILE" -d "$TMPDIR" >/dev/null 2>&1 || abort "解压失败"
+[ -f "$TMPDIR/module.prop" ] || abort "模块包不完整（缺少 module.prop）"
+
+cd "$TMPDIR" || abort "进临时目录失败"
+if [ -f customize.sh ]; then
+  . ./customize.sh
+fi
+
+ui_print "- 完成，重启后守护自动启动"
+exit 0
