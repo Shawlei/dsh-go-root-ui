@@ -157,8 +157,8 @@ build.sh                         打包：./build.sh → dist/<id>-<ver>.zip
 git tag v1.1.0 && git push origin v1.1.0
 ```
 
-想用 GitHub Actions 自动打包发布，把 `docs/release-workflow.yml` 的内容复制到
-`.github/workflows/release.yml` 即可（推 workflow 文件需要带 `workflow` 权限的 token）。
+推 `v*` tag 后，GitHub Actions 会自动 `./build.sh` 打包并把 zip 挂到 Release 上；
+也可以在 Actions 页手动 Run workflow，只产出 artifact。
 
 ## English
 

@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.1.1
+
+- 启用 GitHub Actions：推 `v*` tag 自动打包并发布 Release
+- 移除 `docs/release-workflow.yml` 重复文件
+
 ## 1.1.0
 
 - 重构为通用实现：自动发现 proot rootfs 与 App uid，不再写死包名/uid

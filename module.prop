@@ -1,6 +1,6 @@
 id=dshgo_rootui
 name=dsh-go Root UI
-version=1.1.0
-versionCode=11000
+version=1.1.1
+versionCode=11001
 author=Shawlei
 description=给 proot 运行环境（dsh-go 等）递 root：手机侧 root 守护 + 模块 WebUI 控制台。只监听 127.0.0.1，token 认证。
