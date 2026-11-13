@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.1.4
+
+- 修复 WebUI 状态错位：SukiSU 的原生桥回调是 `(errno, stdout, stderr)`，
+  多出的退出码让每行都串了一位（症状：运行身份显示 `1`、SELinux 显示 `17`）
+- 桥回调统一归一化，兼容 `(stdout, stderr)` / `(errno, stdout, stderr)` / `(errno, stdout)` / Promise / 对象
+- 状态改为按 `key=value` 解析，不再依赖行号
+- 「容器客户端」改为检查 rootfs 里的真实路径（此前检查手机侧 `/usr/local/bin`，永远显示未安装）
+
 ## 1.1.3
 
 - 修复 token 错位：`customize.sh` 不再预先把 token 烤进 `bin/client.sh`，

@@ -38,15 +38,19 @@
     return false;
   }
 
-  /* 兼容 4 参回调 / 3 参回调 / 返回 Promise 或对象 */
+  /* 兼容各种桥签名：
+   *   (stdout, stderr)                 —— KernelSU 官方 npm 包
+   *   (errno, stdout, stderr)          —— SukiSU 实测
+   *   (errno, stdout)                  —— 部分分支
+   *   返回 Promise / 直接返回对象
+   */
   function bridgeExec(cmd) {
     return new Promise(function (resolve, reject) {
       var done = false, timer = null;
-      function ok(a, b) {
+      function settle(r) {
         if (done) return;
         done = true; if (timer) clearTimeout(timer);
-        if (a && typeof a === "object") resolve({ stdout: a.stdout || "", stderr: a.stderr || "" });
-        else resolve({ stdout: a == null ? "" : String(a), stderr: b == null ? "" : String(b) });
+        resolve({ stdout: r.stdout || "", stderr: r.stderr || "", errno: r.errno });
       }
       function bad(e) {
         if (done) return;
@@ -54,7 +58,13 @@
         reject(e instanceof Error ? e : new Error(String(e)));
       }
       var cb = "_cb" + Date.now() + "_" + (state.seq++);
-      window[cb] = ok;
+      window[cb] = function () {
+        var a = [].slice.call(arguments);
+        if (a.length >= 3) return settle({ errno: a[0], stdout: a[1], stderr: a[2] });
+        if (a.length === 2 && typeof a[0] === "number") return settle({ errno: a[0], stdout: a[1] });
+        if (a.length === 1 && typeof a[0] === "object") return settle(a[0]);
+        settle({ stdout: a[0], stderr: a[1] });
+      };
       window[cb + "_error"] = bad;
       var ret;
       try { ret = state.bridge.exec(cmd, "{}", cb, cb + "_error"); }
@@ -63,14 +73,10 @@
         catch (e2) { bad(e2); return; }
       }
       if (ret && typeof ret.then === "function") {
-        ret.then(function (v) { ok(v && v.stdout, v && v.stderr); }, bad); return;
+        ret.then(function (v) { settle(v || {}); }, bad); return;
       }
-      if (ret && (ret.stdout !== undefined || ret.errno !== undefined)) {
-        ok(ret.stdout, ret.stderr); return;
-      }
-      timer = setTimeout(function () {
-        bad(new Error("桥没有回调（调用形状不匹配）"));
-      }, 2500);
+      if (ret && (ret.stdout !== undefined || ret.errno !== undefined)) { settle(ret); return; }
+      timer = setTimeout(function () { bad(new Error("桥没有回调（调用形状不匹配）")); }, 2500);
     });
   }
 
@@ -116,29 +122,36 @@
   }
 
   function status() {
-    exec("id -u; getprop ro.product.model; getprop ro.build.version.release; " +
-         "cat /proc/self/attr/current 2>/dev/null; " +
-         "ls " + MODDIR + "/webroot/index.html >/dev/null 2>&1 && echo mod=ok; " +
-         "ls /usr/local/bin/r >/dev/null 2>&1 && echo cli=yes")
-      .then(function (txt) {
-        var L = strip(txt).split("\n");
-        var uid = (L[0] || "").trim();
-        $("s-uid").innerHTML = uid === "0"
-          ? '<span class="ok">0 · root</span>'
-          : '<span class="bad">' + (uid || "?") + "</span>";
-        $("s-dev").textContent = (L[1] || "—") + " · Android " + (L[2] || "—");
-        $("s-ctx").textContent = L[3] || "—";
-        $("s-cli").innerHTML = txt.indexOf("cli=yes") >= 0
-          ? '<span class="ok">已安装 r / rfix</span>'
-          : '<span class="bad">未安装</span>';
-        setMode(state.bridge ? "原生 " + state.bridgeName : "HTTP 7000");
-      })
-      .catch(function (e) {
-        $("s-uid").innerHTML = '<span class="bad">通道未通</span>';
-        show("通道未通：" + errText(e) +
-          "\n\n诊断：bridge=" + (state.bridge ? state.bridgeName : "未找到") +
-          "  origin=" + location.href);
-      });
+    var probe = [
+      'echo "uid=$(id -u)"',
+      'echo "model=$(getprop ro.product.model)"',
+      'echo "android=$(getprop ro.build.version.release)"',
+      'echo "ctx=$(cat /proc/self/attr/current 2>/dev/null)"',
+      'RS=$(cat /data/adb/dshgo_rootui/rootfs 2>/dev/null)',
+      'if [ -n "$RS" ] && [ -x "$RS/usr/local/bin/r" ]; then echo "cli=yes"; else echo "cli=no"; fi'
+    ].join("; ");
+    exec(probe).then(function (txt) {
+      txt = strip(txt);
+      var g = function (k) {
+        var m = txt.match(new RegExp("^" + k + "=(.*)$", "m"));
+        return m ? m[1].trim() : "";
+      };
+      var uid = g("uid");
+      $("s-uid").innerHTML = uid === "0"
+        ? '<span class="ok">0 · root</span>'
+        : '<span class="bad">' + (uid || "?") + "</span>";
+      $("s-dev").textContent = (g("model") || "—") + " · Android " + (g("android") || "—");
+      $("s-ctx").textContent = g("ctx") || "—";
+      $("s-cli").innerHTML = g("cli") === "yes"
+        ? '<span class="ok">已安装 r / rfix</span>'
+        : '<span class="bad">未安装（点「更新客户端」）</span>';
+      setMode(state.bridge ? "原生 " + state.bridgeName : "HTTP 7000");
+    }).catch(function (e) {
+      $("s-uid").innerHTML = '<span class="bad">通道未通</span>';
+      show("通道未通：" + errText(e) +
+        "\n\n诊断：bridge=" + (state.bridge ? state.bridgeName : "未找到") +
+        "  origin=" + location.href);
+    });
   }
 
   function api(path, body) {

@@ -122,7 +122,15 @@ curl -s -X POST --data-binary 'id' "http://127.0.0.1:7000/api/exec?token=$TOK"
 | APatch | 同 Magisk |
 
 WebUI 里依次探测 `ksu` / `$ksu` / `kernelsu` / `$kernelsu` / `ksuAPI` 五种桥名，
-都找不到时回退到 HTTP。
+都找不到时回退到 HTTP。不同实现的原生桥回调签名不一样，前端已统一归一化：
+
+| 签名 | 来源 |
+|---|---|
+| `(stdout, stderr)` | KernelSU 官方 npm 包 |
+| `(errno, stdout, stderr)` | SukiSU 实测 |
+| `(errno, stdout)` | 部分分支 |
+
+返回 Promise 或直接返回对象也能识别。
 
 ## 目录结构
 
